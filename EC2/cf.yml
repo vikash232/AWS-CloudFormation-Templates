@@ -1,0 +1,12 @@
+Parameters:
+    x:
+        Type: String
+        Description: this is variable for my instance type
+
+Resources:
+  MyFirstOSbyCF:
+    Type: 'AWS::EC2::Instance'
+    Properties:
+      ImageId: ami-0d5eff06f840b45e9
+      InstanceType:  !Ref x
+      AvailabilityZone: us-east-1a

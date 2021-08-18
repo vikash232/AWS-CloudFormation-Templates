@@ -1,0 +1,112 @@
+Parameters:
+  AMI:
+    Type: String
+    Description: vikash custom AMI for Web Server
+    Default: ami-0c2b8ca1dad447f8a
+
+  InstanceSize:
+    Type: String
+    Description: Set Instance size
+    Default: t2.micro
+  KeyName:
+    Type: String
+    Description: Put key KeyName
+    Default: docker3
+Resources:
+  myVPC:
+    Type: AWS::EC2::VPC
+    Properties:
+      CidrBlock: 10.0.0.0/16
+      EnableDnsSupport: "true"
+      EnableDnsHostnames: "true"
+      InstanceTenancy: default
+      Tags:
+        - Key: stack
+          Value: production
+
+  myInternetGateway:
+    Type: AWS::EC2::InternetGateway
+    Properties:
+      Tags:
+        - Key: stack
+          Value: production
+
+  AttachGateway:
+    Type: AWS::EC2::VPCGatewayAttachment
+    Properties:
+      VpcId: !Ref myVPC
+      InternetGatewayId: !Ref myInternetGateway
+
+  mySubnet:
+    Type: AWS::EC2::Subnet
+    Properties:
+      VpcId: !Ref myVPC
+      CidrBlock: 10.0.0.0/24
+      AvailabilityZone: !Select [0, !GetAZs ]
+      Tags:
+        - Key: stack
+          Value: production
+
+  myRouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId: !Ref myVPC
+      Tags:
+        - Key: stack
+          Value: production
+
+  myRoute:
+    Type: AWS::EC2::Route
+    DependsOn: myInternetGateway
+    Properties:
+      RouteTableId: !Ref myRouteTable
+      DestinationCidrBlock: 0.0.0.0/0
+      GatewayId: !Ref myInternetGateway
+
+  mySubnetRouteTableAssociation:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref mySubnet
+      RouteTableId: !Ref myRouteTable
+
+  MyFirstObj:
+    Type: AWS::EC2::Instance
+    Properties:
+      ImageId: !Ref AMI
+      InstanceType: !Ref InstanceSize
+      KeyName: !Ref KeyName
+      SubnetId: !Ref mySubnet
+      SecurityGroupIds:
+        - Ref: InstanceSecurityGroup
+      Tags:
+        - Key: Name
+          Value: Instance_by_CloudFormation
+
+  MyEIP:
+    Type: AWS::EC2::EIP
+    Properties:
+      InstanceId: !Ref MyFirstObj
+
+  InstanceSecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Allow http to client host
+      VpcId: !Ref myVPC
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 80
+          ToPort: 80
+          CidrIp: 0.0.0.0/0
+      SecurityGroupEgress:
+        - IpProtocol: -1
+          CidrIp: 0.0.0.0/0
+      Tags:
+        - Key: SGname
+          Value: SG_For_CF
+# Outputs:
+#   PublicIp:
+#     Value:
+#       "Fn::GetAtt":
+#         - MyEIP
+#         - PublicIp
+#     Description: Server's PublicIp Address
